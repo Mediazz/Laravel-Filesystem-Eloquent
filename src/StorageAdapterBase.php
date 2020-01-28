@@ -61,7 +61,7 @@ abstract class StorageAdapter
     /**
      * StorageAdapterBase constructor.
      */
-    private function __construct()
+    public function __construct()
     {
         $this->fileSystem = Storage::disk(static::CONNECTION);
     }
