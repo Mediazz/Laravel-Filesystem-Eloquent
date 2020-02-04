@@ -89,6 +89,18 @@ abstract class StorageAdapter
     }
 
     /**
+     * @param StorageAdapter $adapter
+     * @param string $fileName
+     * @throws StorageException
+     * @throws StorageFileNotFoundException
+     * TODO: refactor to use move function
+     */
+    public function moveTo(StorageAdapter $adapter, string $fileName): void
+    {
+        $adapter->put($fileName,$this->get($fileName));
+    }
+
+    /**
      * Return a list of the files within the current directory
      * @return Collection
      * @throws StorageException
@@ -146,14 +158,14 @@ abstract class StorageAdapter
 
     /**
      * Put the content of a file onto the disc
-     * @param string $file
+     * @param string $fileName
      * @param $content
      * @param array $options
      * @throws StorageException
      */
-    public function put(string $file, $content, array $options = []): void
+    public function put(string $fileName, $content, array $options = []): void
     {
-        $this->fileSystem->put($this->getFullPath($file), $content, [
+        $this->fileSystem->put($this->getFullPath($fileName), $content, [
             'visibility' => $options['visibility'] ?? Filesystem::VISIBILITY_PRIVATE,
             // TODO: mime, header, filesize, visibiltiy
         ]);
