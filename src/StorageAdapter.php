@@ -107,9 +107,9 @@ abstract class StorageAdapter
      * @throws StorageException
      * @throws StorageFileNotFoundException
      */
-    public function copyTo(StorageAdapter $adapter, string $fileName): void
+    public function copyTo(StorageAdapter $adapter, string $fileName, ?string $newFileName = null): void
     {
-        $adapter->put($fileName,$this->get($fileName));
+        $adapter->put($newFileName ?? $fileName,$this->get($fileName));
     }
 
     /**
