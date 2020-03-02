@@ -98,6 +98,18 @@ abstract class StorageAdapter
     public function moveTo(StorageAdapter $adapter, string $fileName): void
     {
         $adapter->put($fileName,$this->get($fileName));
+        $this->delete($fileName);
+    }
+
+    /**
+     * @param StorageAdapter $adapter
+     * @param string $fileName
+     * @throws StorageException
+     * @throws StorageFileNotFoundException
+     */
+    public function copyTo(StorageAdapter $adapter, string $fileName): void
+    {
+        $adapter->put($fileName,$this->get($fileName));
     }
 
     /**
