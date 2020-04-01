@@ -6,10 +6,19 @@ namespace Mediazz\Storage;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use League\Flysystem\FileExistsException;
+use League\Flysystem\FileNotFoundException;
 use Mediazz\Storage\Exceptions\StorageException;
 use Mediazz\Storage\Exceptions\StorageFileAlreadyExistsException;
 use Mediazz\Storage\Exceptions\StorageFileNotFoundException;
+use Mediazz\Storage\Exceptions\StorageFolderNotEmptyException;
 use Mediazz\Storage\Exceptions\StorageStreamException;
+
+// TODO: deprecated
+function str_contains(string $haystack, string $needle)
+{
+    return strpos($haystack, $needle) !== false;
+}
 
 /**
  * https://laravel.com/docs/5.7/filesystem
@@ -75,8 +84,6 @@ abstract class StorageAdapter
         return new static();
     }
 
-    // TODO: Old modified returns Carbon date
-
     /**
      * @param string $subFolder
      * @return StorageAdapter
@@ -89,67 +96,88 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param StorageAdapter $adapter
+     * @param StorageAdapter $toLocation
      * @param string $fileName
+     * @param string|null $newFilename
      * @throws StorageException
+     * @throws StorageFileAlreadyExistsException
      * @throws StorageFileNotFoundException
-     * TODO: refactor to use move function
      */
-    public function moveTo(StorageAdapter $adapter, string $fileName): void
+    public function moveTo(StorageAdapter $toLocation, string $fileName, ?string $newFilename = null): void
     {
-        $adapter->put($fileName,$this->get($fileName));
-        $this->delete($fileName);
+        try {
+            $this->fileSystem->move($this->getFullPath($fileName), $toLocation->getFullPath($newFilename ?? $fileName));
+        } catch (FileNotFoundException $exception) {
+            // File not available - nothing to move
+            throw new StorageFileNotFoundException($exception->getMessage());
+        } catch (FileExistsException $exception) {
+            // File already exists at path
+            throw new StorageFileAlreadyExistsException($exception->getMessage());
+        }
     }
 
     /**
      * @param StorageAdapter $adapter
      * @param string $fileName
+     * @param string|null $newFileName
      * @throws StorageException
+     * @throws StorageFileAlreadyExistsException
      * @throws StorageFileNotFoundException
      */
     public function copyTo(StorageAdapter $adapter, string $fileName, ?string $newFileName = null): void
     {
-        $adapter->put($newFileName ?? $fileName,$this->get($fileName));
+        try {
+            $this->fileSystem->copy($this->getFullPath($fileName), $adapter->getFullPath($newFileName ?? $fileName));
+        } catch (FileNotFoundException $exception) {
+            // File not available - nothing to move
+            throw new StorageFileNotFoundException($exception->getMessage());
+        } catch (FileExistsException $exception) {
+            // File already exists at path
+            throw new StorageFileAlreadyExistsException($exception->getMessage());
+        }
     }
 
     /**
-     * Return a list of the files within the current directory
+     * @param string $folder
      * @return Collection
      * @throws StorageException
      */
-    public function listFiles(): Collection
+    public function listFiles(string $folder = ''): Collection
     {
-        return collect($this->fileSystem->files($this->getFullPath()));
+        return collect($this->fileSystem->files($this->getFolderPath($folder)));
     }
 
     /**
      * Return a list of all files within all directories of the current directory
+     * @param string $folder
      * @return Collection
      * @throws StorageException
      */
-    public function listAllFiles(): Collection
+    public function listAllFiles(string $folder = ''): Collection
     {
-        return collect($this->fileSystem->allFiles($this->getFullPath()));
+        return collect($this->fileSystem->allFiles($this->getFolderPath($folder)));
     }
 
     /**
-     * Returns a list of all the folders within the current directory
+     * * Returns a list of all the folders within the current directory
+     * @param string $folder
      * @return Collection
      * @throws StorageException
      */
-    public function listFolders(): Collection
+    public function listFolders(string $folder = ''): Collection
     {
-        return collect($this->fileSystem->directories($this->getFullPath()));
+        return collect($this->fileSystem->directories($this->getFolderPath($folder)));
     }
 
     /**
      * Returns Folders with all the subfolders
+     * @param string $folder
      * @return Collection
      * @throws StorageException
      */
-    public function listAllFolders(): Collection
+    public function listAllFolders(string $folder = ''): Collection
     {
-        return collect($this->fileSystem->allDirectories($this->getFullPath()));
+        return collect($this->fileSystem->allDirectories($this->getFolderPath($folder)));
     }
 
     /**
@@ -177,6 +205,7 @@ abstract class StorageAdapter
      */
     public function put(string $fileName, $content, array $options = []): void
     {
+        // TODO: Check if this already exists
         $this->fileSystem->put($this->getFullPath($fileName), $content, [
             'visibility' => $options['visibility'] ?? Filesystem::VISIBILITY_PRIVATE,
             // TODO: mime, header, filesize, visibiltiy
@@ -192,6 +221,16 @@ abstract class StorageAdapter
     public function exists(string $file): bool
     {
         return $this->fileSystem->exists($this->getFullPath($file));
+    }
+
+    /**
+     * @param string $file
+     * @param string $newFilename
+     * @throws StorageException
+     */
+    public function rename(string $file, string $newFilename): void
+    {
+        $this->moveTo($this, $file, $newFilename);
     }
 
     /**
@@ -215,13 +254,95 @@ abstract class StorageAdapter
     }
 
     /**
-     * Delete a Folder
-     * // TODO: Maybe a check if the folder is empty
+     * @param string $newFolderName
+     * @return StorageAdapter
      * @throws StorageException
      */
-    public function deleteFolder(): void
+    public function renameFolder(string $newFolderName): StorageAdapter
     {
-        $this->fileSystem->deleteDirectory($this->getFullPath());
+        $moveTo = clone $this;
+        $moveTo->setSubFolder($newFolderName);
+
+        $this->moveToFolder($moveTo);
+
+        return $moveTo;
+    }
+
+    /**
+     * @param StorageAdapter $moveTo
+     * @throws StorageException
+     */
+    public function moveToFolder(StorageAdapter $moveTo)
+    {
+        if(!$moveTo->isFolderEmpty()) {
+            throw new StorageFolderNotEmptyException('Cannot move because destination exists.');
+        }
+
+        // Move $folder from $this StorageAdapter to $moveTo StorageAdapter
+        $this->listAllFiles()->each(function (string $filePath) use ($moveTo) {
+            $cleanFile = str_replace($this->getFolderPath(), '', $filePath);
+
+            $this->moveTo($moveTo, $cleanFile);
+        });
+    }
+
+    /**
+     * @param string $path
+     * @return string
+     */
+    private function filenameFromPath(string $path): string
+    {
+        if (str_contains($path, '/')) {
+            $parts = explode('/', $path);
+            $filename = end($parts);
+        } else {
+            $filename = $path;
+        }
+
+        return $filename;
+    }
+
+    /**
+     * Copy the current folder into the new Folder
+     * @param StorageAdapter $newLocation
+     * @throws StorageException
+     */
+    public function copyToFolder(StorageAdapter $newLocation)
+    {
+        // Move $folder from $this StorageAdapter to $moveTo StorageAdapter
+        $this->listAllFiles()->each(function (string $filePath) use ($newLocation) {
+            $cleanFile = str_replace($this->getFolderPath(), '', $filePath);
+
+            $this->copyTo($newLocation, $cleanFile);
+        });
+    }
+
+    /**
+     * @param string $folder
+     * @return bool
+     * @throws StorageException
+     */
+    public function isFolderEmpty(string $folder = ''): bool
+    {
+        return $this->listFiles($folder)->isEmpty() && $this->listFolders()->isEmpty();
+    }
+
+    /**
+     * @param bool $force
+     * @param string|null $folder
+     * @throws StorageException
+     * @throws StorageFolderNotEmptyException
+     */
+    public function deleteFolder(bool $force = false, string $folder = ''): void
+    {
+        if (!$force) {
+            // Throw exception if the folder is not empty
+            if (!$this->isFolderEmpty($folder)) {
+                throw new StorageFolderNotEmptyException();
+            }
+        }
+
+        $this->fileSystem->deleteDirectory($this->getFolderPath($folder));
     }
 
     /**
@@ -288,12 +409,11 @@ abstract class StorageAdapter
     }
 
     /**
-     * Returns the full path based on the set subFolder and the provided Filename
-     * @param string $file
+     * @param string $folder
      * @return string
      * @throws StorageException
      */
-    public function getFullPath(string $file = ''): string
+    public function getFolderPath(string $folder = ''): string
     {
         $this->validateBasePath();
         $fullPath = static::BASE_PATH ?? '';
@@ -301,6 +421,23 @@ abstract class StorageAdapter
         if ($this->subFolder !== '') {
             $fullPath .= '/' . $this->subFolder;
         }
+
+        if ($folder !== '') {
+            $fullPath .= '/' . $folder;
+        }
+
+        return $fullPath;
+    }
+
+    /**
+     * Returns the full path based on the set subFolder and the provided Filename
+     * @param string $file
+     * @return string
+     * @throws StorageException
+     */
+    public function getFullPath(string $file = ''): string
+    {
+        $fullPath = $this->getFolderPath();
 
         if ($file !== '') {
             $fullPath .= '/' . $file;
@@ -319,7 +456,7 @@ abstract class StorageAdapter
         }
 
         if (is_null(static::BASE_PATH) || static::BASE_PATH === '' || static::BASE_PATH === '/') {
-            throw new StorageException('Working in toot is prohibited');
+            throw new StorageException('Working in root is prohibited. Please set BASE_PATH.');
         }
     }
 

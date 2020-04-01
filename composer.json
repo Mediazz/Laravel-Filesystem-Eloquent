@@ -1,51 +1,51 @@
 {
-  "name": "mediazz/storage",
-  "type": "library",
-  "version": "0.1.0",
-  "description": "Use the Laravel Filesystem in an encapsulated way",
-  "keywords": [
-    "storage",
-    "filesystem"
-  ],
-  "homepage": "https://mediazz.at",
-  "support": {},
-  "license": "MIT",
-  "authors": [
-    {
-      "name": "Mathias Maier",
-      "email": "mathias@mediazz.at",
-      "homepage": "https://mediazz.at"
-    }
-  ],
-  "prefer-stable": true,
-  "minimum-stability": "dev",
-  "bin": [],
-  "require": {
-    "php": "^7.1.8 || ^8.0",
-    "ext-json": "*"
-  },
-  "require-dev": {
-  },
-  "autoload": {
-    "psr-4": {
-      "Mediazz\\Storage\\": "src"
-    }
-  },
-  "autoload-dev": {
-    "psr-4": {
-    }
-  },
-  "config": {
-    "process-timeout": 0,
-    "sort-packages": true
-  },
-  "scripts": {
-  },
-  "extra": {
-    "branch-alias": {
-      "dev-master": "dev"
+    "name": "mediazz/storage",
+    "type": "library",
+    "version": "0.1.0",
+    "description": "Use the Laravel Filesystem in an encapsulated way",
+    "keywords": [
+        "storage",
+        "filesystem"
+    ],
+    "homepage": "https://mediazz.at",
+    "support": {},
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Mathias Maier",
+            "email": "mathias@mediazz.at",
+            "homepage": "https://mediazz.at"
+        }
+    ],
+    "prefer-stable": true,
+    "minimum-stability": "dev",
+    "bin": [],
+    "require": {
+        "php": "^7.1.8 || ^8.0",
+        "ext-json": "*"
     },
-    "laravel": {
+    "require-dev": {
+    },
+    "autoload": {
+        "psr-4": {
+            "Mediazz\\Storage\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+        }
+    },
+    "config": {
+        "process-timeout": 0,
+        "sort-packages": true
+    },
+    "scripts": {
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "dev"
+        },
+        "laravel": {
+        }
     }
-  }
 }
