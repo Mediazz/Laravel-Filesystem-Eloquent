@@ -96,6 +96,20 @@ abstract class StorageAdapter
     }
 
     /**
+     * @param string $subFolder
+     * @return StorageAdapter
+     */
+    public function appendSubFolder(string $subFolder): self
+    {
+        if ($this->subFolder === '') {
+            $this->setSubFolder($subFolder);
+        } else {
+            $this->subFolder .= '/' . $subFolder;
+        }
+        return $this;
+    }
+
+    /**
      * @param StorageAdapter $toLocation
      * @param string $fileName
      * @param string|null $newFilename
