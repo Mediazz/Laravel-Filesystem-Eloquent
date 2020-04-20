@@ -284,6 +284,20 @@ abstract class StorageAdapter
 
             $this->moveTo($moveTo, $cleanFile);
         });
+
+        //https://github.com/thephpleague/flysystem-aws-s3-v3/issues/128
+        $this->listAllFolders()->each(function (string $folderPath) use ($moveTo) {
+            $updatedPath = str_replace($this->getFolderPath(), $moveTo->getFolderPath(), $folderPath);
+            $cleanPath = str_replace($this->getFolderPath() . '/', '', $folderPath);
+
+            $this->fileSystem->makeDirectory($updatedPath);
+            $storage = clone $this;
+            $storage->appendSubFolder($cleanPath);;
+            $storage->deleteFolder(true);
+        });
+
+        $this->fileSystem->makeDirectory($moveTo->getFolderPath());
+        $this->deleteFolder(true);
     }
 
     /**
@@ -304,17 +318,26 @@ abstract class StorageAdapter
 
     /**
      * Copy the current folder into the new Folder
-     * @param StorageAdapter $newLocation
+     * @param StorageAdapter $copyTo
      * @throws StorageException
      */
-    public function copyToFolder(StorageAdapter $newLocation)
+    public function copyToFolder(StorageAdapter $copyTo)
     {
         // Move $folder from $this StorageAdapter to $moveTo StorageAdapter
-        $this->listAllFiles()->each(function (string $filePath) use ($newLocation) {
+        $this->listAllFiles()->each(function (string $filePath) use ($copyTo) {
             $cleanFile = str_replace($this->getFolderPath(), '', $filePath);
 
-            $this->copyTo($newLocation, $cleanFile);
+            $this->copyTo($copyTo, $cleanFile);
         });
+
+        $this->listAllFolders()->each(function (string $folderPath) use ($copyTo) {
+            $updatedPath = str_replace($this->getFolderPath(), $copyTo->getFolderPath(), $folderPath);
+
+            $this->fileSystem->makeDirectory($updatedPath);
+        });
+
+        //https://github.com/thephpleague/flysystem-aws-s3-v3/issues/128
+        $this->fileSystem->makeDirectory($copyTo->getFolderPath());
     }
 
     /**
