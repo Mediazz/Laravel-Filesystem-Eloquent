@@ -3,6 +3,8 @@
 
 namespace Mediazz\Storage;
 
+use Carbon\Carbon;
+use http\QueryString;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Contracts\Filesystem\Filesystem;
@@ -357,14 +359,44 @@ abstract class StorageAdapter
     }
 
     /**
-     * Returns the Size of a file in TODO
      * @param string $file
+     * @param bool $prependPath
      * @return int
      * @throws StorageException
      */
-    public function getSize(string $file): int
+    public function getSize(string $file, bool $prependPath = false): int
     {
-        return $this->fileSystem->size($this->getFullPath($file));
+        $file = $prependPath ? $this->getFullPath($file) : $file;
+
+        return $this->fileSystem->size($file);
+    }
+
+    /**
+     * @param string $file
+     * @param bool $prependPath
+     * @return Carbon
+     * @throws StorageException
+     */
+    public function lastModified(string $file, bool $prependPath = false): Carbon
+    {
+        $file = $prependPath ? $this->getFullPath($file) : $file;
+
+        return new Carbon($this->fileSystem->lastModified($file));
+    }
+
+    /**
+     * @param string $path
+     * @return string
+     */
+    public static function filenameFromPath(string $path): string
+    {
+        $pathParts = explode('/', $path);
+
+        if(count($pathParts) > 1) {
+            return end($pathParts);
+        }
+
+        return $path;
     }
 
     /**
