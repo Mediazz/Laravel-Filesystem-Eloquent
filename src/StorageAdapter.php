@@ -360,6 +360,34 @@ abstract class StorageAdapter
 
     /**
      * @param string $file
+     * @param bool|bool $prependPath
+     * @return mixed
+     */
+    public function getMetadata(string $file, bool $prependPath = false): Collection
+    {
+        return collect([
+            'name' => $prependPath ? $file : $this->filenameFromPath($file),
+            'path' => $prependPath ? $this->getFullPath($file) : $file,
+            'size' => $this->getSize($file, $prependPath),
+            'modified' => $this->lastModified($file, $prependPath),
+        ]);
+    }
+
+    /**
+     * @param string $folder
+     * @param bool|bool $prependPath
+     * @return mixed
+     */
+    public function getFolderMetadata(string $folder, bool $prependPath = false): Collection
+    {
+        return collect([
+            'name' => $prependPath ? $folder : $this->filenameFromPath($folder),
+            'path' => $prependPath ? $this->getFullPath($folder) : $folder,
+        ]);
+    }
+
+    /**
+     * @param string $file
      * @param bool $prependPath
      * @return int
      * @throws StorageException
@@ -382,21 +410,6 @@ abstract class StorageAdapter
         $file = $prependPath ? $this->getFullPath($file) : $file;
 
         return new Carbon($this->fileSystem->lastModified($file));
-    }
-
-    /**
-     * @param string $path
-     * @return string
-     */
-    public static function filenameFromPath(string $path): string
-    {
-        $pathParts = explode('/', $path);
-
-        if(count($pathParts) > 1) {
-            return end($pathParts);
-        }
-
-        return $path;
     }
 
     /**
