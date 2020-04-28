@@ -98,14 +98,20 @@ abstract class StorageAdapter
     /**
      * @param string $subFolder
      * @return StorageAdapter
+     * @throws StorageException
      */
     public function appendSubFolder(string $subFolder): self
     {
         if ($this->subFolder === '') {
+            //set as subfolder if no subfolder has been set
             $this->setSubFolder($subFolder);
+        } else if ($subFolder === '') {
+            //throw an error if the user wants to append an empty string
+            throw new StorageException('Appending an empty string is invalid!');
         } else {
             $this->subFolder .= '/' . $subFolder;
         }
+
         return $this;
     }
 
