@@ -300,12 +300,32 @@ abstract class StorageAdapter
             throw new StorageFolderNotEmptyException('Cannot move because destination exists.');
         }
 
-        // Move $folder from $this StorageAdapter to $moveTo StorageAdapter
+        // Move all files from the current folder to the new folder (updates path)
         $this->listAllFiles()->each(function (string $filePath) use ($moveTo) {
             $cleanFile = str_replace($this->getFolderPath(), '', $filePath);
 
             $this->moveTo($moveTo, $cleanFile);
         });
+
+        // Move all folders from the current folder to the new folder
+        // We create new folders and delete the old ones
+        // This fixes the issue with moving empty folders
+        //https://github.com/thephpleague/flysystem-aws-s3-v3/issues/128
+        $this->listAllFolders()->each(function (string $folderPath) use ($moveTo) {
+            $updatedPath = str_replace($this->getFolderPath(), $moveTo->getFolderPath(), $folderPath);
+            $cleanPath = str_replace($this->getFolderPath() . '/', '', $folderPath);
+
+            $this->fileSystem->makeDirectory($updatedPath);
+            $storage = clone $this;
+            $storage->appendSubFolder($cleanPath);;
+            $storage->deleteFolder(true);
+        });
+
+        //Create the new "moveTo" folder
+        $this->fileSystem->makeDirectory($moveTo->getFolderPath());
+
+        //Delete the old "moveFrom" folder
+        $this->deleteFolder(true);
     }
 
     /**
@@ -326,17 +346,29 @@ abstract class StorageAdapter
 
     /**
      * Copy the current folder into the new Folder
-     * @param StorageAdapter $newLocation
+     * @param StorageAdapter $copyTo
      * @throws StorageException
      */
-    public function copyToFolder(StorageAdapter $newLocation)
+    public function copyToFolder(StorageAdapter $copyTo)
     {
-        // Move $folder from $this StorageAdapter to $moveTo StorageAdapter
-        $this->listAllFiles()->each(function (string $filePath) use ($newLocation) {
+        // Copy all files from the current folder to the new folder
+        $this->listAllFiles()->each(function (string $filePath) use ($copyTo) {
             $cleanFile = str_replace($this->getFolderPath(), '', $filePath);
 
-            $this->copyTo($newLocation, $cleanFile);
+            $this->copyTo($copyTo, $cleanFile);
         });
+
+        // Copy all folders from the current folder by creating new ones
+        // This fixes the issue with copying empty folders
+        // https://github.com/thephpleague/flysystem-aws-s3-v3/issues/128
+        $this->listAllFolders()->each(function (string $folderPath) use ($copyTo) {
+            $updatedPath = str_replace($this->getFolderPath(), $copyTo->getFolderPath(), $folderPath);
+
+            $this->fileSystem->makeDirectory($updatedPath);
+        });
+
+        // Create the "copyFrom" folder in the destination
+        $this->fileSystem->makeDirectory($copyTo->getFolderPath());
     }
 
     /**
