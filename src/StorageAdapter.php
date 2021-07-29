@@ -116,8 +116,7 @@ abstract class StorageAdapter
             //set as subfolder if no subfolder has been set
             $this->setSubFolder($subFolder);
         } else if ($subFolder === '') {
-            //throw an error if the user wants to append an empty string
-            throw new StorageException('Appending an empty string is invalid!');
+            return $this;
         } else {
             $this->subFolder .= '/' . $subFolder;
         }
@@ -327,7 +326,7 @@ abstract class StorageAdapter
 
             $this->fileSystem->makeDirectory($updatedPath);
             $storage = clone $this;
-            $storage->appendSubFolder($cleanPath);;
+            $storage->appendSubFolder($cleanPath);
             $storage->deleteFolder(true);
         });
 
