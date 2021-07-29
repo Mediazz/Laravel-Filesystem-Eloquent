@@ -70,6 +70,12 @@ abstract class StorageAdapter
     protected $allowWorkingInRoot = false;
 
     /**
+     * If set to true it is possible to pass ../ within an Path
+     * @var bool
+     */
+    protected $allowFolderUp = false;
+
+    /**
      * StorageAdapterBase constructor.
      */
     public function __construct()
@@ -92,7 +98,7 @@ abstract class StorageAdapter
      */
     public function setSubFolder(string $subFolder): self
     {
-        $this->subFolder = $subFolder;
+        $this->subFolder = $this->cleanPath($subFolder);
 
         return $this;
     }
@@ -104,6 +110,8 @@ abstract class StorageAdapter
      */
     public function appendSubFolder(string $subFolder): self
     {
+        $subFolder = $this->cleanPath($subFolder);
+
         if ($this->subFolder === '') {
             //set as subfolder if no subfolder has been set
             $this->setSubFolder($subFolder);
@@ -127,6 +135,8 @@ abstract class StorageAdapter
      */
     public function moveTo(StorageAdapter $toLocation, string $fileName, ?string $newFilename = null): void
     {
+        $fileName = $this->cleanPath($fileName);
+        $newFilename = $this->cleanPath($newFilename);
         try {
             $this->fileSystem->move($this->getFullPath($fileName), $toLocation->getFullPath($newFilename ?? $fileName));
         } catch (FileNotFoundException $exception) {
@@ -296,7 +306,7 @@ abstract class StorageAdapter
      */
     public function moveToFolder(StorageAdapter $moveTo)
     {
-        if(!$moveTo->isFolderEmpty()) {
+        if (!$moveTo->isFolderEmpty()) {
             throw new StorageFolderNotEmptyException('Cannot move because destination exists.');
         }
 
@@ -417,6 +427,8 @@ abstract class StorageAdapter
      */
     public function getMetadata(string $file, bool $prependPath = false): Collection
     {
+        $file = $this->cleanPath($file);
+
         return collect([
             'name' => $prependPath ? $file : $this->filenameFromPath($file),
             'path' => $prependPath ? $this->getFullPath($file) : $file,
@@ -432,6 +444,8 @@ abstract class StorageAdapter
      */
     public function getFolderMetadata(string $folder, bool $prependPath = false): Collection
     {
+        $folder = $this->cleanPath($folder);
+
         return collect([
             'name' => $prependPath ? $folder : $this->filenameFromPath($folder),
             'path' => $prependPath ? $this->getFullPath($folder) : $folder,
@@ -446,6 +460,7 @@ abstract class StorageAdapter
      */
     public function getSize(string $file, bool $prependPath = false): int
     {
+        $file = $this->cleanPath($file);
         $file = $prependPath ? $this->getFullPath($file) : $file;
 
         return $this->fileSystem->size($file);
@@ -459,6 +474,8 @@ abstract class StorageAdapter
      */
     public function lastModified(string $file, bool $prependPath = false): Carbon
     {
+        $file = $this->cleanPath($file);
+
         $file = $prependPath ? $this->getFullPath($file) : $file;
 
         return new Carbon($this->fileSystem->lastModified($file));
@@ -512,6 +529,8 @@ abstract class StorageAdapter
      */
     public function getFolderPath(string $folder = ''): string
     {
+        $folder = $this->cleanPath($folder);
+
         $this->validateBasePath();
         $fullPath = static::BASE_PATH ?? '';
 
@@ -534,6 +553,8 @@ abstract class StorageAdapter
      */
     public function getFullPath(string $file = ''): string
     {
+        $file = $this->cleanPath($file);
+
         $fullPath = $this->getFolderPath();
 
         if ($file !== '') {
@@ -563,5 +584,19 @@ abstract class StorageAdapter
     public function getFilesystem(): Filesystem
     {
         return $this->fileSystem;
+    }
+
+    private function cleanPath(?string $path): ?string
+    {
+        if (is_null($path)) {
+            return null;
+        }
+
+        if (!$this->allowFolderUp) {
+            $path = str_replace('../', '', $path);
+            $path = str_replace('..', '', $path);
+        }
+
+        return $path;
     }
 }
