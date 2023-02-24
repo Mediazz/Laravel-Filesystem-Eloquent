@@ -564,6 +564,20 @@ abstract class StorageAdapter
     }
 
     /**
+     * @param string $file
+     * @param \DateTimeInterface $expiration
+     * @param array $options
+     * @return string
+     * @throws StorageException
+     */
+    public function getTemporaryUrl(string $file, \DateTimeInterface $expiration, array $options = []): string
+    {
+        $path = $this->getFullPath($file);
+
+        return $this->getFilesystem()->temporaryUrl($path, $expiration, $options);
+    }
+
+    /**
      * @throws StorageException
      */
     private function validateBasePath(): void
