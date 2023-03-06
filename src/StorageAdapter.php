@@ -606,6 +606,10 @@ abstract class StorageAdapter
         }
 
         if (!$this->allowFolderUp) {
+            if($path === '..') {
+                $path = '';
+            }
+
             $path = str_replace('../', '', $path);
             $path = str_replace('/..', '', $path);
         }
