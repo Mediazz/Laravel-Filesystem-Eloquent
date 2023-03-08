@@ -137,6 +137,10 @@ abstract class StorageAdapter
         $fileName = $this->cleanPath($fileName);
         $newFilename = $this->cleanPath($newFilename);
         try {
+            if($toLocation->exists($newFilename ?? $fileName)) {
+                throw new StorageFileAlreadyExistsException('Eine Datei mit diesem Namen existiert bereits');
+            }
+
             $this->fileSystem->move($this->getFullPath($fileName), $toLocation->getFullPath($newFilename ?? $fileName));
         } catch (FileNotFoundException $exception) {
             // File not available - nothing to move
