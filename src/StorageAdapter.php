@@ -225,7 +225,13 @@ abstract class StorageAdapter
     public function get(string $file): string
     {
         try {
-            return $this->fileSystem->get($this->getFullPath($file));
+            $content = $this->fileSystem->get($this->getFullPath($file));
+
+            if(empty($content)) {
+                throw new \Illuminate\Contracts\Filesystem\FileNotFoundException();
+            }
+
+            return $content;
         } catch (\Illuminate\Contracts\Filesystem\FileNotFoundException $e) {
             throw new StorageFileNotFoundException($this->getFullPath($file) . ' does not exist');
         }

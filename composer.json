@@ -1,7 +1,7 @@
 {
     "name": "mediazz/storage",
     "type": "library",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "description": "Use the Laravel Filesystem in an encapsulated way",
     "keywords": [
         "storage",
