@@ -227,7 +227,7 @@ abstract class StorageAdapter
         try {
             $content = $this->fileSystem->get($this->getFullPath($file));
 
-            if(empty($content)) {
+            if(is_null($content)) {
                 throw new \Illuminate\Contracts\Filesystem\FileNotFoundException();
             }
 
