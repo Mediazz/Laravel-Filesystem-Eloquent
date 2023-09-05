@@ -580,9 +580,16 @@ abstract class StorageAdapter
      * @return string
      * @throws StorageException
      */
-    public function getTemporaryUrl(string $file, \DateTimeInterface $expiration, array $options = []): string
+    public function getTemporaryUrl(string $file, \DateTimeInterface $expiration, array $options = [], ?string $displayName = null): string
     {
         $path = $this->getFullPath($file);
+
+        if ($displayName) {
+            $options = [
+                'ResponseContentType' => 'application/octet-stream',
+                'ResponseContentDisposition' => 'attachment; filename=' . $displayName,
+            ];
+        }
 
         return $this->getFilesystem()->temporaryUrl($path, $expiration, $options);
     }
