@@ -587,7 +587,7 @@ abstract class StorageAdapter
         if ($displayName) {
             $options = [
                 'ResponseContentType' => 'application/octet-stream',
-                'ResponseContentDisposition' => 'attachment; filename="' . $displayName . '"',
+                'ResponseContentDisposition' => 'attachment; filename="' . urlencode($displayName) . '"',
             ];
         }
 
