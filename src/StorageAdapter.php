@@ -87,7 +87,7 @@ abstract class StorageAdapter
      * Create a new instance of the Storage Adapter
      * @return StorageAdapter
      */
-    public static function init(): self
+    public static function init(): static
     {
         return new static();
     }
