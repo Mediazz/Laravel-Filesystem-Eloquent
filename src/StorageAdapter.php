@@ -4,7 +4,7 @@
 namespace Mediazz\Storage;
 
 use Carbon\Carbon;
-use http\QueryString;
+use DateTimeInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Contracts\Filesystem\Filesystem;
@@ -33,47 +33,38 @@ abstract class StorageAdapter
 
     /**
      * Must be set to be working
-     * @var string Defines the BasePath of this Storage
      */
-    public const BASE_PATH = null;
+    public const ?string BASE_PATH = null;
 
     /**
      * Defines the Connection which is defined in config/filesystems.php
      * cdn should/should be on another have cdn
-     * @var string
      */
-    public const CONNECTION = null;
+    public const ?string CONNECTION = null;
 
     /**
      * Sometimes one might want to store something temporary
-     * @var string
      */
-    protected $tempFolder = '';
+    protected string $tempFolder = '';
 
     /**
      * The subfolder used in the basePath
      * May be used e.g. when a user has his own folder in e.g. the invoice content
-     * @var string
      */
-    protected $subFolder = '';
+    protected string $subFolder = '';
 
-    /**
-     * @var Filesystem
-     */
-    protected $fileSystem;
+    protected Filesystem $fileSystem;
 
     /**
      * If set to true it is possible to work in the root of the disk.
      * No baseFolder needed
-     * @var bool
      */
-    protected $allowWorkingInRoot = false;
+    protected bool $allowWorkingInRoot = false;
 
     /**
      * If set to true it is possible to pass ../ within an Path
-     * @var bool
      */
-    protected $allowFolderUp = false;
+    protected bool $allowFolderUp = false;
 
     /**
      * StorageAdapterBase constructor.
@@ -85,18 +76,13 @@ abstract class StorageAdapter
 
     /**
      * Create a new instance of the Storage Adapter
-     * @return StorageAdapter
      */
-    public static function init(): self
+    public static function init(): static
     {
         return new static();
     }
 
-    /**
-     * @param string $subFolder
-     * @return StorageAdapter
-     */
-    public function setSubFolder(string $subFolder): self
+    public function setSubFolder(string $subFolder): static
     {
         $this->subFolder = $this->cleanPath($subFolder);
 
@@ -104,11 +90,9 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param string $subFolder
-     * @return StorageAdapter
      * @throws StorageException
      */
-    public function appendSubFolder(string $subFolder): self
+    public function appendSubFolder(string $subFolder): static
     {
         $subFolder = $this->cleanPath($subFolder);
 
@@ -125,9 +109,6 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param StorageAdapter $toLocation
-     * @param string $fileName
-     * @param string|null $newFilename
      * @throws StorageException
      * @throws StorageFileAlreadyExistsException
      * @throws StorageFileNotFoundException
@@ -152,9 +133,6 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param StorageAdapter $adapter
-     * @param string $fileName
-     * @param string|null $newFileName
      * @throws StorageException
      * @throws StorageFileAlreadyExistsException
      * @throws StorageFileNotFoundException
@@ -173,8 +151,6 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param string $folder
-     * @return Collection
      * @throws StorageException
      */
     public function listFiles(string $folder = ''): Collection
@@ -184,8 +160,6 @@ abstract class StorageAdapter
 
     /**
      * Return a list of all files within all directories of the current directory
-     * @param string $folder
-     * @return Collection
      * @throws StorageException
      */
     public function listAllFiles(string $folder = ''): Collection
@@ -194,9 +168,7 @@ abstract class StorageAdapter
     }
 
     /**
-     * * Returns a list of all the folders within the current directory
-     * @param string $folder
-     * @return Collection
+     * Returns a list of all the folders within the current directory
      * @throws StorageException
      */
     public function listFolders(string $folder = ''): Collection
@@ -206,8 +178,6 @@ abstract class StorageAdapter
 
     /**
      * Returns Folders with all the subfolders
-     * @param string $folder
-     * @return Collection
      * @throws StorageException
      */
     public function listAllFolders(string $folder = ''): Collection
@@ -217,9 +187,6 @@ abstract class StorageAdapter
 
     /**
      * Return the content of a file
-     * @param string $file
-     * @return string
-     * @throws StorageException
      * @throws StorageFileNotFoundException
      */
     public function get(string $file): string
@@ -239,12 +206,9 @@ abstract class StorageAdapter
 
     /**
      * Put the content of a file onto the disc
-     * @param string $fileName
-     * @param $content
-     * @param array $options
      * @throws StorageException
      */
-    public function put(string $fileName, $content, array $options = []): void
+    public function put(string $fileName, string $content, array $options = []): void
     {
         // TODO: Check if this already exists
         $this->fileSystem->put($this->getFullPath($fileName), $content, [
@@ -255,8 +219,6 @@ abstract class StorageAdapter
 
     /**
      * Checks if the file exitsts
-     * @param string $file
-     * @return bool
      * @throws StorageException
      */
     public function exists(string $file): bool
@@ -265,8 +227,6 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param string $file
-     * @param string $newFilename
      * @throws StorageException
      */
     public function rename(string $file, string $newFilename): void
@@ -276,7 +236,6 @@ abstract class StorageAdapter
 
     /**
      * Delete a File
-     * @param string $file
      * @throws StorageException
      */
     public function delete(string $file): void
@@ -286,7 +245,6 @@ abstract class StorageAdapter
 
     /**
      * Create a new Folder in the given base/subdirectory
-     * @param string $folder
      * @throws StorageException
      */
     public function makeFolder(string $folder): void
@@ -295,11 +253,9 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param string $newFolderName
-     * @return StorageAdapter
      * @throws StorageException
      */
-    public function renameFolder(string $newFolderName): StorageAdapter
+    public function renameFolder(string $newFolderName): static
     {
         $moveTo = clone $this;
         $moveTo->setSubFolder($newFolderName);
@@ -310,10 +266,9 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param StorageAdapter $moveTo
      * @throws StorageException
      */
-    public function moveToFolder(StorageAdapter $moveTo)
+    public function moveToFolder(StorageAdapter $moveTo): void
     {
         if (!$moveTo->isFolderEmpty()) {
             throw new StorageFolderNotEmptyException('Cannot move because destination exists.');
@@ -347,10 +302,6 @@ abstract class StorageAdapter
         $this->deleteFolder(true);
     }
 
-    /**
-     * @param string $path
-     * @return string
-     */
     private function filenameFromPath(string $path): string
     {
         if (str_contains($path, '/')) {
@@ -365,10 +316,9 @@ abstract class StorageAdapter
 
     /**
      * Copy the current folder into the new Folder
-     * @param StorageAdapter $copyTo
      * @throws StorageException
      */
-    public function copyToFolder(StorageAdapter $copyTo)
+    public function copyToFolder(StorageAdapter $copyTo): void
     {
         // Copy all files from the current folder to the new folder
         $this->listAllFiles()->each(function (string $filePath) use ($copyTo) {
@@ -391,8 +341,6 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param string $folder
-     * @return bool
      * @throws StorageException
      */
     public function isFolderEmpty(string $folder = ''): bool
@@ -401,8 +349,6 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param bool $force
-     * @param string|null $folder
      * @throws StorageException
      * @throws StorageFolderNotEmptyException
      */
@@ -420,7 +366,6 @@ abstract class StorageAdapter
 
     /**
      * Return the visibility of a file
-     * @param string $file
      * @return string private or public
      * @throws StorageException
      */
@@ -430,9 +375,7 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param string $file
-     * @param bool|bool $prependPath
-     * @return mixed
+     * @throws StorageException
      */
     public function getMetadata(string $file, bool $prependPath = false): Collection
     {
@@ -446,11 +389,6 @@ abstract class StorageAdapter
         ]);
     }
 
-    /**
-     * @param string $folder
-     * @param bool|bool $prependPath
-     * @return mixed
-     */
     public function getFolderMetadata(string $folder, bool $prependPath = false): Collection
     {
         $folder = $this->cleanPath($folder);
@@ -462,9 +400,6 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param string $file
-     * @param bool $prependPath
-     * @return int
      * @throws StorageException
      */
     public function getSize(string $file, bool $prependPath = false): int
@@ -476,9 +411,6 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param string $file
-     * @param bool $prependPath
-     * @return Carbon
      * @throws StorageException
      */
     public function lastModified(string $file, bool $prependPath = false): Carbon
@@ -491,9 +423,7 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param string $file
-     * @param $resource
-     * @param array $options
+     * @param resource $resource
      * @throws StorageException
      * @throws StorageFileAlreadyExistsException
      */
@@ -510,7 +440,6 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param string $file
      * @return resource|null
      * @throws StorageException
      * @throws StorageFileNotFoundException
@@ -532,8 +461,6 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param string $folder
-     * @return string
      * @throws StorageException
      */
     public function getFolderPath(string $folder = ''): string
@@ -556,8 +483,6 @@ abstract class StorageAdapter
 
     /**
      * Returns the full path based on the set subFolder and the provided Filename
-     * @param string $file
-     * @return string
      * @throws StorageException
      */
     public function getFullPath(string $file = ''): string
@@ -574,13 +499,9 @@ abstract class StorageAdapter
     }
 
     /**
-     * @param string $file
-     * @param \DateTimeInterface $expiration
-     * @param array $options
-     * @return string
      * @throws StorageException
      */
-    public function getTemporaryUrl(string $file, \DateTimeInterface $expiration, array $options = [], ?string $displayName = null): string
+    public function getTemporaryUrl(string $file, DateTimeInterface $expiration, array $options = [], ?string $displayName = null): string
     {
         $path = $this->getFullPath($file);
 
@@ -608,9 +529,6 @@ abstract class StorageAdapter
         }
     }
 
-    /**
-     * @return Filesystem
-     */
     public function getFilesystem(): Filesystem
     {
         return $this->fileSystem;
